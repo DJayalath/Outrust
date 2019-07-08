@@ -51,7 +51,7 @@ fn main() {
     let mut timer = Timer::new(0, SystemTime::now(), SystemTime::now());
 
     let mut bumper = Bumper::new(ivec2(WIDTH as i32 / 2, HEIGHT as i32 - 10), 0.05, uvec2(100, 10));
-    let mut ball = Ball::new(ivec2(WIDTH as i32 / 2, HEIGHT as i32 - 20), dvec2(0.5, -0.5), 10);
+    let mut ball = Ball::new(ivec2(WIDTH as i32 / 2, HEIGHT as i32 - 20), normalize(dvec2(0.5, -0.5)), 10);
 
     let mut bricks: Vec<Brick> = Vec::with_capacity(100);
 
@@ -86,28 +86,30 @@ fn main() {
         ball.update(timer.frame_time, &mut score);
         bumper.update(timer.frame_time);
 
-        while bbumper_collision(&bumper, &mut ball) {
+        if bbumper_collision(&bumper, &mut ball) {
 
-            ball.pos.x -= bb_dir(ball.vel.x);
-            if !bbumper_collision(&bumper, &mut ball) {
-                if ball.vel.x < 0.0 {
-                    ball.displace(Side::Left);
-                } else {
-                    ball.displace(Side::Right);
+            loop {
+                ball.pos.x -= bb_dir(ball.vel.x);
+                if !bbumper_collision(&bumper, &mut ball) {
+                    if ball.vel.x < 0.0 {
+                        ball.displace(Side::Left);
+                    } else {
+                        ball.displace(Side::Right);
+                    }
+
+                    break
                 }
 
-                break
-            }
+                ball.pos.y -= bb_dir(ball.vel.y);
+                if !bbumper_collision(&bumper, &mut ball) {
+                    if ball.vel.y < 0.0 {
+                        ball.displace(Side::Top);
+                    } else {
+                        ball.displace(Side::Bottom);
+                    }
 
-            ball.pos.y -= bb_dir(ball.vel.y);
-            if !bbumper_collision(&bumper, &mut ball) {
-                if ball.vel.y < 0.0 {
-                    ball.displace(Side::Top);
-                } else {
-                    ball.displace(Side::Bottom);
+                    break
                 }
-
-                break
             }
         }
 
@@ -115,43 +117,43 @@ fn main() {
             for i in 0..COLS {
 
                 if bricks[i as usize + COLS as usize * j as usize].active {
-                    while bb_collision(&mut bricks[i as usize + COLS as usize * j as usize], &mut ball) {
+                    if bb_collision(&mut bricks[i as usize + COLS as usize * j as usize], &mut ball) {
+                        loop {
+                            ball.pos.x -= bb_dir(ball.vel.x) as i32;
+                            if !bb_collision(&mut bricks[i as usize + COLS as usize * j as usize], &mut ball) {
+                                if ball.vel.x < 0.0 {
+                                    ball.displace(Side::Left);
+                                } else {
+                                    ball.displace(Side::Right);
+                                }
 
-                        ball.pos.x -= bb_dir(ball.vel.x) as i32;
-                        if !bb_collision(&mut bricks[i as usize + COLS as usize * j as usize], &mut ball) {
-                            if ball.vel.x < 0.0 {
-                                ball.displace(Side::Left);
-                            } else {
-                                ball.displace(Side::Right);
+                                let norm = normalize(ball.vel);
+                                ball.vel = norm * (1.0 + score as f64 / 50.0);
+                                bricks[i as usize + COLS as usize * j as usize].active = false;
+                                score += 1;
+
+                                break
                             }
 
-                            let norm = normalize(ball.vel);
-                            ball.vel = norm * (1.0 + score as f64 / 50.0);
-                            bricks[i as usize + COLS as usize * j as usize].active = false;
-                            score += 1;
+                            ball.pos.y -= bb_dir(ball.vel.y) as i32;
+                            if !bb_collision(&mut bricks[i as usize + COLS as usize * j as usize], &mut ball) {
+                                if ball.vel.y < 0.0 {
+                                    ball.displace(Side::Top);
+                                } else {
+                                    ball.displace(Side::Bottom);
+                                }
 
-                            break
-                        }
+                                let norm = normalize(ball.vel);
+                                ball.vel = norm * (1.0 + score as f64 / 50.0);
+                                bricks[i as usize + COLS as usize * j as usize].active = false;
+                                score += 1;
 
-                        ball.pos.y -= bb_dir(ball.vel.y) as i32;
-                        if !bb_collision(&mut bricks[i as usize + COLS as usize * j as usize], &mut ball) {
-                            if ball.vel.y < 0.0 {
-                                ball.displace(Side::Top);
-                            } else {
-                                ball.displace(Side::Bottom);
+                                break
                             }
-
-                            let norm = normalize(ball.vel);
-                            ball.vel = norm * (1.0 + score as f64 / 50.0);
-                            bricks[i as usize + COLS as usize * j as usize].active = false;
-                            score += 1;
-
-                            break
                         }
 
 
                     }
-                    // ball_brick_collision(&mut bricks[i as usize + COLS as usize * j as usize], &mut ball, &mut score);
                     bricks[i as usize + COLS as usize * j as usize].draw(&mut canvas);
                 }
             }
