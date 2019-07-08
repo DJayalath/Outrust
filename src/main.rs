@@ -115,16 +115,18 @@ fn main() {
             for i in 0..COLS {
 
                 if bricks[i as usize + COLS as usize * j as usize].active {
-                    while bb_collision(&mut bricks[i as usize + COLS as usize * j as usize], &mut ball, &mut score) {
+                    while bb_collision(&mut bricks[i as usize + COLS as usize * j as usize], &mut ball) {
 
                         ball.pos.x -= bb_dir(ball.vel.x) as i32;
-                        if !bb_collision(&mut bricks[i as usize + COLS as usize * j as usize], &mut ball, &mut score) {
+                        if !bb_collision(&mut bricks[i as usize + COLS as usize * j as usize], &mut ball) {
                             if ball.vel.x < 0.0 {
                                 ball.displace(Side::Left);
                             } else {
                                 ball.displace(Side::Right);
                             }
 
+                            let norm = normalize(ball.vel);
+                            ball.vel = norm * (1.0 + score as f64 / 50.0);
                             bricks[i as usize + COLS as usize * j as usize].active = false;
                             score += 1;
 
@@ -132,13 +134,15 @@ fn main() {
                         }
 
                         ball.pos.y -= bb_dir(ball.vel.y) as i32;
-                        if !bb_collision(&mut bricks[i as usize + COLS as usize * j as usize], &mut ball, &mut score) {
+                        if !bb_collision(&mut bricks[i as usize + COLS as usize * j as usize], &mut ball) {
                             if ball.vel.y < 0.0 {
                                 ball.displace(Side::Top);
                             } else {
                                 ball.displace(Side::Bottom);
                             }
 
+                            let norm = normalize(ball.vel);
+                            ball.vel = norm * (1.0 + score as f64 / 50.0);
                             bricks[i as usize + COLS as usize * j as usize].active = false;
                             score += 1;
 
@@ -310,7 +314,7 @@ fn bbumper_collision(bumper: &Bumper, ball: &mut Ball) -> bool {
     collision_x && collision_y
 }
 
-fn bb_collision(brick: &mut Brick, ball: &mut Ball, score: &mut u32) -> bool {
+fn bb_collision(brick: &mut Brick, ball: &mut Ball) -> bool {
 
     // Collision x-axis?
     let collision_x: bool = brick.pos.x + brick.size.x as i32 >= ball.pos.x &&
