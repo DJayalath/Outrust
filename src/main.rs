@@ -5,6 +5,7 @@ use glm::*;
 use sdl2::pixels::Color;
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
+use sdl2::mouse::*;
 use sdl2::rect::Rect;
 use std::time::SystemTime;
 // use std::collections::HashSet;
@@ -30,11 +31,15 @@ fn main() {
     // Build canvas
     let mut canvas = window.into_canvas().build().expect("Problem building canvas from window");
 
+    sdl_context.mouse().show_cursor(false);
+    sdl_context.mouse().capture(true);
+    sdl_context.mouse().set_relative_mouse_mode(true);
+
     let mut event_pump = sdl_context.event_pump().expect("Problem creating event pump");
     let mut timer = Timer::new(0, SystemTime::now(), SystemTime::now());
 
     let mut bumper = Bumper::new(ivec2(WIDTH as i32 / 2, HEIGHT as i32 - 30), 0.05, uvec2(100, 10));
-    let mut ball = Ball::new(ivec2(50, 50), dvec2(0.5, 1.1), 10);
+    let mut ball = Ball::new(ivec2(50, 50), dvec2(1.1, 1.1), 10);
 
    'running: loop {
 
@@ -53,6 +58,9 @@ fn main() {
             }
         }
 
+        // Update bumper position
+        bumper.pos.x = event_pump.mouse_state().x();
+
         // Create a set of pressed Keys.
         let keys: std::collections::HashSet<sdl2::keyboard::Keycode> = 
             event_pump.keyboard_state().pressed_scancodes().filter_map(Keycode::from_scancode).collect();
@@ -66,6 +74,7 @@ fn main() {
         // The rest of the game loop goes here...
         ball.update(timer.frame_time);
         bumper.update(timer.frame_time);
+        ball_bumper_collision(&bumper, &mut ball);
 
         ball.draw(&mut canvas);
         bumper.draw(&mut canvas);
@@ -109,13 +118,18 @@ impl Ball {
         self.pos.x += (self.vel.x * frame_time as f64) as i32;
         self.pos.y += (self.vel.y * frame_time as f64) as i32;
 
+        // Test wall collision
         if self.pos.x < 0 {
+            self.pos.x = 0;
             self.displace(Side::Left)
         } else if self.pos.y < 0 {
+            self.pos.y = 0;
             self.displace(Side::Top)
         } else if self.pos.x + self.size as i32 > WIDTH as i32 - 1 {
+            self.pos.x = WIDTH as i32 - 1 - self.size as i32;
             self.displace(Side::Right)
         } else if self.pos.y + self.size as i32 > HEIGHT as i32 - 1 {
+            self.pos.y = HEIGHT as i32 - 1 - self.size as i32;
             self.displace(Side::Bottom)
         }
     }
@@ -206,5 +220,18 @@ impl Timer {
             .expect("Problem updating time").as_millis();
 
         self.last = self.now;
+    }
+}
+
+fn ball_bumper_collision(bumper: &Bumper, ball: &mut Ball) {
+    if ball.pos.y >= bumper.pos.y {
+        if ball.pos.x >= bumper.pos.x && ball.pos.x <= bumper.pos.x + bumper.size.x as i32 {
+            ball.pos.y = bumper.pos.y;
+            ball.displace(Side::Bottom);
+        } else if ball.pos.x + ball.size as i32 >= bumper.pos.x && 
+            ball.pos.x + ball.size as i32 <= bumper.pos.x + bumper.size.x as i32 {
+            ball.pos.y = bumper.pos.y;
+            ball.displace(Side::Bottom);
+        }
     }
 }
