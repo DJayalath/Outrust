@@ -86,7 +86,30 @@ fn main() {
         ball.update(timer.frame_time, &mut score);
         bumper.update(timer.frame_time);
 
-        ball_bumper_collision(&bumper, &mut ball);
+        while bbumper_collision(&bumper, &mut ball) {
+
+            ball.pos.x -= bb_dir(ball.vel.x);
+            if !bbumper_collision(&bumper, &mut ball) {
+                if ball.vel.x < 0.0 {
+                    ball.displace(Side::Left);
+                } else {
+                    ball.displace(Side::Right);
+                }
+
+                break
+            }
+
+            ball.pos.y -= bb_dir(ball.vel.y);
+            if !bbumper_collision(&bumper, &mut ball) {
+                if ball.vel.y < 0.0 {
+                    ball.displace(Side::Top);
+                } else {
+                    ball.displace(Side::Bottom);
+                }
+
+                break
+            }
+        }
 
         for j in 0..ROWS {
             for i in 0..COLS {
@@ -94,7 +117,7 @@ fn main() {
                 if bricks[i as usize + COLS as usize * j as usize].active {
                     while bb_collision(&mut bricks[i as usize + COLS as usize * j as usize], &mut ball, &mut score) {
 
-                        ball.pos.x -= bb_dir_x(ball.vel.x) as i32;
+                        ball.pos.x -= bb_dir(ball.vel.x) as i32;
                         if !bb_collision(&mut bricks[i as usize + COLS as usize * j as usize], &mut ball, &mut score) {
                             if ball.vel.x < 0.0 {
                                 ball.displace(Side::Left);
@@ -103,11 +126,12 @@ fn main() {
                             }
 
                             bricks[i as usize + COLS as usize * j as usize].active = false;
-                            
+                            score += 1;
+
                             break
                         }
 
-                        ball.pos.y -= bb_dir_y(ball.vel.y) as i32;
+                        ball.pos.y -= bb_dir(ball.vel.y) as i32;
                         if !bb_collision(&mut bricks[i as usize + COLS as usize * j as usize], &mut ball, &mut score) {
                             if ball.vel.y < 0.0 {
                                 ball.displace(Side::Top);
@@ -116,6 +140,7 @@ fn main() {
                             }
 
                             bricks[i as usize + COLS as usize * j as usize].active = false;
+                            score += 1;
 
                             break
                         }
@@ -272,17 +297,17 @@ impl Timer {
     }
 }
 
-fn ball_bumper_collision(bumper: &Bumper, ball: &mut Ball) {
-    if ball.pos.y >= bumper.pos.y {
-        if ball.pos.x >= bumper.pos.x && ball.pos.x <= bumper.pos.x + bumper.size.x as i32 {
-            ball.pos.y = bumper.pos.y;
-            ball.displace(Side::Bottom);
-        } else if ball.pos.x + ball.size as i32 >= bumper.pos.x && 
-            ball.pos.x + ball.size as i32 <= bumper.pos.x + bumper.size.x as i32 {
-            ball.pos.y = bumper.pos.y;
-            ball.displace(Side::Bottom);
-        }
-    }
+fn bbumper_collision(bumper: &Bumper, ball: &mut Ball) -> bool {
+
+    // Collision x-axis?
+    let collision_x: bool = bumper.pos.x + bumper.size.x as i32 >= ball.pos.x &&
+        ball.pos.x + ball.size as i32 >= bumper.pos.x;
+
+    // Collision y-axis?
+    let collision_y: bool = bumper.pos.y + bumper.size.y as i32 >= ball.pos.y &&
+        ball.pos.y + ball.size as i32 >= bumper.pos.y;
+
+    collision_x && collision_y
 }
 
 fn bb_collision(brick: &mut Brick, ball: &mut Ball, score: &mut u32) -> bool {
@@ -295,15 +320,10 @@ fn bb_collision(brick: &mut Brick, ball: &mut Ball, score: &mut u32) -> bool {
     let collision_y: bool = brick.pos.y + brick.size.y as i32 >= ball.pos.y &&
         ball.pos.y + ball.size as i32 >= brick.pos.y;
 
-    if collision_x && collision_y {
-        *score += 1;
-        true
-    } else {
-        false
-    }
+    collision_x && collision_y
 }
 
-fn bb_dir_y(vel: f64) -> i32 {
+fn bb_dir(vel: f64) -> i32 {
     if vel > 0.0 {
         1
     } else if vel < 0.0 {
@@ -311,78 +331,6 @@ fn bb_dir_y(vel: f64) -> i32 {
     } else {
         0
     }
-}
-
-fn bb_dir_x(vel: f64) -> i32 {
-    if vel > 0.0 {
-        1
-    } else if vel < 0.0 {
-        -1
-    } else {
-        0
-    }
-}
-
-fn ball_brick_collision(brick: &mut Brick, ball: &mut Ball, score: &mut u32) {
-
-    if brick.active {
-
-        let norm = normalize(ball.vel);
-
-        if ball.pos.y >= brick.pos.y && ball.pos.y <= brick.pos.y + brick.size.y as i32 {
-
-            if ball.pos.x >= brick.pos.x && ball.pos.x <= brick.pos.x + brick.size.x as i32 {
-                brick.active = false;
-                *score += 1;
-                ball.vel = norm * (1.0 + *score as f64 / 100.0);
-                if ball.vel.y < 0.0 {
-                    ball.displace(Side::Top)
-                } else {
-                    ball.displace(Side::Bottom)
-                }
-            } else if ball.pos.x + ball.size as i32 >= brick.pos.x && ball.pos.x + ball.size as i32 <= brick.pos.x + brick.size.x as i32 {
-                brick.active = false;
-                *score += 1;
-                ball.vel = norm * (1.0 + *score as f64 / 100.0);
-                if ball.vel.y < 0.0 {
-                    ball.displace(Side::Top)
-                } else {
-                    ball.displace(Side::Bottom)
-                }
-            }
-
-        } else if ball.pos.y + ball.size as i32 >= brick.pos.y && ball.pos.y + ball.size as i32 <= brick.pos.y + brick.size.y as i32 {
-
-            if ball.pos.x >= brick.pos.x && ball.pos.x <= brick.pos.x + brick.size.x as i32 {
-                brick.active = false;
-                *score += 1;
-                ball.vel = norm * (1.0 + *score as f64 / 100.0);
-                if ball.vel.y < 0.0 {
-                    ball.displace(Side::Top)
-                } else {
-                    ball.displace(Side::Bottom)
-                }
-            } else if ball.pos.x + ball.size as i32 >= brick.pos.x && ball.pos.x + ball.size as i32 <= brick.pos.x + brick.size.x as i32 {
-                brick.active = false;
-                *score += 1;
-                ball.vel = norm * (1.0 + *score as f64 / 100.0);
-                if ball.vel.y < 0.0 {
-                    ball.displace(Side::Top)
-                } else {
-                    ball.displace(Side::Bottom)
-                }
-            }
-
-        }
-    }
-    // Top side
-
-    // Bottom side
-
-    // Left side
-
-    // Right side
-
 }
 
 // Scale fonts to a reasonable size when they're too big (though they might look less smooth)
