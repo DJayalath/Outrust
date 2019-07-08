@@ -1,0 +1,9 @@
+[package]
+name = "outrust"
+version = "0.1.0"
+authors = ["armytricks <dhjayalath@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+glm = "0.2.3"
+sdl2 = "0.32.2"
