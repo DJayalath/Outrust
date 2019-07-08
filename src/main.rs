@@ -14,6 +14,9 @@ const WIDTH: usize = 1280;
 const HEIGHT: usize = 720;
 const TITLE: &str = "Outrust";
 
+const ROWS: u32 = 10;
+const COLS: u32 = 10; 
+
 const BUMPER_ACCEL: f64 = 0.05;
 const BUMPER_MAX: f64 = 1.1;
 const BUMPER_BOOST: f64 = 10.0;
@@ -38,8 +41,17 @@ fn main() {
     let mut event_pump = sdl_context.event_pump().expect("Problem creating event pump");
     let mut timer = Timer::new(0, SystemTime::now(), SystemTime::now());
 
-    let mut bumper = Bumper::new(ivec2(WIDTH as i32 / 2, HEIGHT as i32 - 30), 0.05, uvec2(100, 10));
+    let mut bumper = Bumper::new(ivec2(WIDTH as i32 / 2, HEIGHT as i32 - 10), 0.05, uvec2(100, 10));
     let mut ball = Ball::new(ivec2(50, 50), dvec2(1.1, 1.1), 10);
+
+    let mut bricks: Vec<Brick> = Vec::with_capacity(100);
+
+    // Total width: 690, height: 290
+    for j in 0..ROWS {
+        for i in 0..COLS {
+            bricks.push(Brick::new(ivec2(300 + i as i32 * 60 + i as i32 * 10, 145 + 20 * j as i32 + 10 * j as i32), uvec2(60, 20), true));
+        }
+    }
 
    'running: loop {
 
@@ -65,16 +77,23 @@ fn main() {
         let keys: std::collections::HashSet<sdl2::keyboard::Keycode> = 
             event_pump.keyboard_state().pressed_scancodes().filter_map(Keycode::from_scancode).collect();
 
-        if keys.contains(&Keycode::Left) {
-            bumper.displace(Move::Left);
-        } else if keys.contains(&Keycode::Right) {
-            bumper.displace(Move::Right);
-        }
+        // if keys.contains(&Keycode::Left) {
+        //     bumper.displace(Move::Left);
+        // } else if keys.contains(&Keycode::Right) {
+        //     bumper.displace(Move::Right);
+        // }
 
         // The rest of the game loop goes here...
         ball.update(timer.frame_time);
         bumper.update(timer.frame_time);
         ball_bumper_collision(&bumper, &mut ball);
+
+        for j in 0..ROWS {
+            for i in 0..COLS {
+                ball_brick_collision(&mut bricks[i as usize + COLS as usize * j as usize], &mut ball);
+                bricks[i as usize + COLS as usize * j as usize].draw(&mut canvas);
+            }
+        }
 
         ball.draw(&mut canvas);
         bumper.draw(&mut canvas);
@@ -95,6 +114,26 @@ enum Side {
     Bottom,
     Left,
     Right,
+}
+
+struct Brick {
+    pos: Vector2<i32>,
+    size: Vector2<u32>,
+    active: bool,
+}
+
+impl Brick {
+    fn new (pos: Vector2<i32>, size: Vector2<u32>, active: bool) -> Brick {
+        Brick { pos, size, active }
+    }
+
+    fn draw(&self, canvas: &mut sdl2::render::Canvas<sdl2::video::Window>) {
+        if self.active {
+            canvas.set_draw_color(Color::RGB(0xFF, 0xFF, 0xFF));
+            canvas.fill_rect(Rect::new(self.pos.x, self.pos.y, self.size.x, self.size.y))
+                .expect("Problem drawing ball");
+        }
+    }
 }
 
 struct Ball {
@@ -234,4 +273,56 @@ fn ball_bumper_collision(bumper: &Bumper, ball: &mut Ball) {
             ball.displace(Side::Bottom);
         }
     }
+}
+
+fn ball_brick_collision(brick: &mut Brick, ball: &mut Ball) {
+
+    if brick.active {
+
+        if ball.pos.y >= brick.pos.y && ball.pos.y <= brick.pos.y + brick.size.y as i32 {
+
+            if ball.pos.x >= brick.pos.x && ball.pos.x <= brick.pos.x + brick.size.x as i32 {
+                brick.active = false;
+                if ball.vel.y < 0.0 {
+                    ball.displace(Side::Top)
+                } else {
+                    ball.displace(Side::Bottom)
+                }
+            } else if ball.pos.x + ball.size as i32 >= brick.pos.x && ball.pos.x + ball.size as i32 <= brick.pos.x + brick.size.x as i32 {
+                brick.active = false;
+                if ball.vel.y < 0.0 {
+                    ball.displace(Side::Top)
+                } else {
+                    ball.displace(Side::Bottom)
+                }
+            }
+
+        } else if ball.pos.y + ball.size as i32 >= brick.pos.y && ball.pos.y + ball.size as i32 <= brick.pos.y + brick.size.y as i32 {
+
+            if ball.pos.x >= brick.pos.x && ball.pos.x <= brick.pos.x + brick.size.x as i32 {
+                brick.active = false;
+                if ball.vel.y < 0.0 {
+                    ball.displace(Side::Top)
+                } else {
+                    ball.displace(Side::Bottom)
+                }
+            } else if ball.pos.x + ball.size as i32 >= brick.pos.x && ball.pos.x + ball.size as i32 <= brick.pos.x + brick.size.x as i32 {
+                brick.active = false;
+                if ball.vel.y < 0.0 {
+                    ball.displace(Side::Top)
+                } else {
+                    ball.displace(Side::Bottom)
+                }
+            }
+
+        }
+    }
+    // Top side
+
+    // Bottom side
+
+    // Left side
+
+    // Right side
+
 }
