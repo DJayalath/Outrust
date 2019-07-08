@@ -5,21 +5,15 @@ use glm::*;
 use sdl2::pixels::Color;
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
-use sdl2::mouse::*;
 use sdl2::rect::Rect;
 use std::time::SystemTime;
-// use std::collections::HashSet;
 
 const WIDTH: usize = 1280;
 const HEIGHT: usize = 720;
 const TITLE: &str = "Outrust";
 
 const ROWS: u32 = 10;
-const COLS: u32 = 10; 
-
-const BUMPER_ACCEL: f64 = 0.05;
-const BUMPER_MAX: f64 = 1.1;
-const BUMPER_BOOST: f64 = 10.0;
+const COLS: u32 = 10;
 
 fn main() {
 
@@ -73,16 +67,6 @@ fn main() {
         // Update bumper position
         bumper.pos.x = event_pump.mouse_state().x();
 
-        // Create a set of pressed Keys.
-        let keys: std::collections::HashSet<sdl2::keyboard::Keycode> = 
-            event_pump.keyboard_state().pressed_scancodes().filter_map(Keycode::from_scancode).collect();
-
-        // if keys.contains(&Keycode::Left) {
-        //     bumper.displace(Move::Left);
-        // } else if keys.contains(&Keycode::Right) {
-        //     bumper.displace(Move::Right);
-        // }
-
         // The rest of the game loop goes here...
         ball.update(timer.frame_time);
         bumper.update(timer.frame_time);
@@ -102,11 +86,6 @@ fn main() {
 
         timer.update();
     }
-}
-
-enum Move {
-    Left,
-    Right,
 }
 
 enum Side {
@@ -198,33 +177,6 @@ impl Bumper {
         canvas.set_draw_color(Color::RGB(0xFF, 0xFF, 0xFF));
         canvas.fill_rect(Rect::new(self.pos.x, self.pos.y, self.size.x, self.size.y))
             .expect("Problem drawing bumper");
-    }
-
-    fn displace(&mut self, dir: Move) {
-        self.vel += match dir {
-            Move::Left => {
-                if sign(-BUMPER_ACCEL) != sign(self.vel) {
-                    -BUMPER_ACCEL * BUMPER_BOOST
-                }
-                else {
-                    -BUMPER_ACCEL
-                }
-            },
-            Move::Right => {
-                if sign(BUMPER_ACCEL) != sign(self.vel) {
-                    BUMPER_ACCEL * BUMPER_BOOST
-                }
-                else {
-                    BUMPER_ACCEL
-                }
-            },
-        };
-
-        if self.vel > BUMPER_MAX {
-            self.vel = BUMPER_MAX;
-        } else if self.vel < -BUMPER_MAX {
-            self.vel = -BUMPER_MAX
-        }
     }
 
     fn update(&mut self, frame_time: u128) {
